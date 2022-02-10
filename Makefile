@@ -1,20 +1,29 @@
 
-SRC_FOLDER="src/"
-TARGET_FOLDER="target/"
+SRC_FOLDER=src
+TARGET_FOLDER=target
+SOURCES=boot.o main.o
 
-all: clean target_folder bootloader
+CFLAGS=-nostdlib -nostdinc -fno-builtin -fno-stack-protector -ffreestanding -Wall -Wextra
+LDFLAGS=-T${SRC_FOLDER}/link.ld -ffreestanding -nostdlib
+ASFLAGS=---32
 
-.PHONY: target_folder
-target_folder:
-	mkdir -p ${TARGET_FOLDER}
+all: $(SOURCES) link 
 
-bootloader:
-	nasm ${SRC_FOLDER}/bootloader/bootloader.asm -f bin -o ${TARGET_FOLDER}/bootloader.bin
+create_target:
+	mkdir -p target
 
-	
-run: bootloader
-	qemu-system-i386 ${TARGET_FOLDER}/bootloader.bin
-
-.PHONY: clean
 clean:
-	rmdir ${TARGET_FOLDER}
+	rm -rf target/
+
+run: 
+	qemu-system-i386 -kernel target/kernel.bin 
+
+link: create_target
+	gcc $(LDFLAGS) -m32 -o ${TARGET_FOLDER}/kernel.bin ${TARGET_FOLDER}/boot.o ${TARGET_FOLDER}/main.o
+
+boot.o: create_target
+	as ${SRC_FOLDER}/boot.s -o ${TARGET_FOLDER}/boot.o
+
+main.o: create_target 
+	gcc ${CFLAGS} -m32 -lgcc ${SRC_FOLDER}/main.c -c -o ${TARGET_FOLDER}/main.o 
+	
