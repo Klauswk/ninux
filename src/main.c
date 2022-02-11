@@ -70,7 +70,12 @@ void terminal_putentryat(char c, unsigned short color, unsigned int x, unsigned 
 
 void terminal_putchar(char c)
 {
-	terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
+	if(c == '\n') {
+		++terminal_row;
+		terminal_column = 0;
+	} else {
+		terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
+	}
 	if (++terminal_column == VGA_WIDTH) {
 		terminal_column = 0;
 		if (++terminal_row == VGA_HEIGHT)
@@ -92,5 +97,5 @@ void terminal_writestring(const char* data)
 void kmain(void)
 {
 	terminal_initialize();
-	terminal_writestring("hello world!");
+	terminal_writestring("hello world!\nThis is a new line!");
 }
