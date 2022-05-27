@@ -3,16 +3,14 @@ CCFLAGS=-m32 -ffreestanding
 
 ASM=nasm
 
-SRC_FOLDER=src
-TARGET_FOLDER=target
+SRC_FOLDER=src/
+TARGET_FOLDER=target/
 
-SOURCE_FILES=${SRC_FOLDER}/vga/vga.c ${SRC_FOLDER}/string_utils/string_utils.c ${SRC_FOLDER}/main.c
-ASM_FILES=${SRC_FOLDER}/boot.s
-OBJ_FILES=$(patsubst src/*.c,${TARGET_FOLDER}/%.o,$(SOURCE_FILES)) 
-BIN_FILES=$(patsubst src/*.s,${TARGET_FOLDER}/%.bin,$(ASM_FILES))
+OBJ_FILES=main.o vga.o string_utils.o 
+BIN_FILES=boot.bin
 
 CFLAGS=-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -ffreestanding -Wall -Wextra
-LDFLAGS=-T${SRC_FOLDER}/link.ld -m elf_i386
+LDFLAGS=-T${SRC_FOLDER}link.ld -m elf_i386
 ASFLAGS=-f elf32
 
 KERNEL_BIN=ninux.bin
@@ -26,15 +24,20 @@ clean:
 	rm -rf target/
 
 run: 
-	qemu-system-i386 -kernel ${TARGET_FOLDER}/${KERNEL_BIN} -monitor stdio
+	qemu-system-i386 -kernel ${TARGET_FOLDER}${KERNEL_BIN} -monitor stdio
 
-${KERNEL_BIN}: ${OBJ_FILES} ${BIN_FILES}  
-	ld ${LDFLAGS} -o ${TARGET_FOLDER}/%@ ${OBJ_FILES} ${BIN_FILES}
+${KERNEL_BIN}: boot.bin vga.o main.o string_utils.o  
+	ld ${LDFLAGS} -o ${TARGET_FOLDER}$@ ${TARGET_FOLDER}boot.bin ${TARGET_FOLDER}vga.o ${TARGET_FOLDER}main.o ${TARGET_FOLDER}string_utils.o
 
-%.bin: %.s create_target 
-	${ASM} ${ASFLAGS} $< -o ${TARGET_FOLDER}/%@
+boot.bin:
+	${ASM} ${ASFLAGS} ${SRC_FOLDER}boot.s -o ${TARGET_FOLDER}$@
 
+main.o:
+	${CC} ${CFLAGS} -c ${SRC_FOLDER}main.c -o ${TARGET_FOLDER}$@
 
-%.o: %.c create_target  
-	${CC} ${CFLAGS} $< -c -o ${TARGET_FOLDER}/%@ 
+vga.o:
+	${CC} ${CFLAGS} -c ${SRC_FOLDER}vga/vga.c -o ${TARGET_FOLDER}$@
+
+string_utils.o:
+	${CC} ${CFLAGS} -c ${SRC_FOLDER}string_utils/string_utils.c -o ${TARGET_FOLDER}$@
 	
