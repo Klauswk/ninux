@@ -1,13 +1,23 @@
+CC=gcc
+CCFLAGS=-m32 -ffreestanding
+
+ASM=nasm
 
 SRC_FOLDER=src
 TARGET_FOLDER=target
-SOURCES=boot.o main.o
 
-CFLAGS=-nostdlib -nostdinc -fno-builtin -fno-stack-protector -ffreestanding -Wall -Wextra
-LDFLAGS=-T${SRC_FOLDER}/link.ld -ffreestanding -nostdlib
-ASFLAGS=--32
+SOURCE_FILES=${SRC_FOLDER}/vga/vga.c ${SRC_FOLDER}/string_utils/string_utils.c ${SRC_FOLDER}/main.c
+ASM_FILES=${SRC_FOLDER}/boot.s
+OBJ_FILES=$(patsubst src/*.c,${TARGET_FOLDER}/%.o,$(SOURCE_FILES)) 
+BIN_FILES=$(patsubst src/*.s,${TARGET_FOLDER}/%.bin,$(ASM_FILES))
 
-all: $(SOURCES) link 
+CFLAGS=-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -ffreestanding -Wall -Wextra
+LDFLAGS=-T${SRC_FOLDER}/link.ld -m elf_i386
+ASFLAGS=-f elf32
+
+KERNEL_BIN=ninux.bin
+
+all: ninux.bin 
 
 create_target:
 	mkdir -p target
@@ -16,14 +26,15 @@ clean:
 	rm -rf target/
 
 run: 
-	qemu-system-i386 -kernel target/kernel.bin 
+	qemu-system-i386 -kernel ${TARGET_FOLDER}/${KERNEL_BIN} -monitor stdio
 
-link: create_target
-	gcc $(LDFLAGS) -m32 -o ${TARGET_FOLDER}/kernel.bin ${TARGET_FOLDER}/boot.o ${TARGET_FOLDER}/main.o
+${KERNEL_BIN}: ${OBJ_FILES} ${BIN_FILES}  
+	ld ${LDFLAGS} -o ${TARGET_FOLDER}/%@ ${OBJ_FILES} ${BIN_FILES}
 
-boot.o: create_target
-	as ${ASFLAGS} ${SRC_FOLDER}/boot.s -o ${TARGET_FOLDER}/boot.o
+%.bin: %.s create_target 
+	${ASM} ${ASFLAGS} $< -o ${TARGET_FOLDER}/%@
 
-main.o: create_target 
-	gcc ${CFLAGS} -m32 -lgcc ${SRC_FOLDER}/main.c -c -o ${TARGET_FOLDER}/main.o 
+
+%.o: %.c create_target  
+	${CC} ${CFLAGS} $< -c -o ${TARGET_FOLDER}/%@ 
 	
