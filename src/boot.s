@@ -17,13 +17,22 @@ resb 16384 ; 16 KiB
 stack_top:
 
 section .text
-global _start:function (_start.end - _start)
-_start:
-	mov esp, stack_top
 
+%include "src/gdt.s"
+
+global _start
+
+_start:
+	lgdt[gdt_descriptor]
+	jmp CODE_SEG:start_protected_mode
+
+[bits 32]
+start_protected_mode:
+	mov eax, cr0
+	or eax, 1
+	mov cr0, eax
 	extern kmain
 	call kmain
 	cli
 .hang:	hlt
 	jmp .hang
-.end:
